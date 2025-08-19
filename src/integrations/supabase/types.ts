@@ -14,30 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      admin: {
-        Row: {
-          created_at: string
-          id: string
-          password_hash: string
-          updated_at: string
-          username: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          password_hash: string
-          updated_at?: string
-          username: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          password_hash?: string
-          updated_at?: string
-          username?: string
-        }
-        Relationships: []
-      }
       customers: {
         Row: {
           cashback_balance: number
@@ -129,9 +105,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_cashback: {
+        Args: { amount: number }
+        Returns: number
+      }
       generate_receipt_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      is_valid_phone: {
+        Args: { phone: string }
+        Returns: boolean
       }
     }
     Enums: {
