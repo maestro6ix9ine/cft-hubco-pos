@@ -101,7 +101,11 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              
+              <img 
+                src="/lovable-uploads/0532acf7-0b68-41b6-924d-f659c98c87a3.png" 
+                alt="C.F.T. Hub & Co. Logo" 
+                className="h-10 w-10"
+              />
               <div>
                 <h1 className="text-xl font-bold">C.F.T. Hub & Co.</h1>
                 <p className="text-sm text-muted-foreground">Point of Sale System</p>

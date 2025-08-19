@@ -42,8 +42,12 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-hero">
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16 text-center">
-        <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-primary shadow-strong">
-          <Scissors className="h-10 w-10 text-primary-foreground" />
+        <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-strong">
+          <img 
+            src="/lovable-uploads/0532acf7-0b68-41b6-924d-f659c98c87a3.png" 
+            alt="C.F.T. Hub & Co. Logo" 
+            className="h-16 w-16 rounded-full"
+          />
         </div>
         
         <h1 className="mb-6 text-4xl font-bold text-primary-foreground md:text-6xl">
