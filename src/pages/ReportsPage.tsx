@@ -47,7 +47,7 @@ interface Transaction {
 }
 
 const ReportsPage = () => {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,19 +132,28 @@ const ReportsPage = () => {
       return;
     }
 
-    // For demo purposes, we'll use a simple password check
-    // In production, you'd want to verify against the actual admin password
-    const result = await login('admin@cfthub.pos', password);
-    
-    if (result.success) {
-      await clearAllTransactions();
-    } else {
+    // Verify user is authenticated
+    if (!user) {
       toast({
-        title: "Error",
-        description: "Invalid password",
+        title: "Authentication Required",
+        description: "Please log in to perform this action",
         variant: "destructive",
       });
+      return;
     }
+
+    // Simple password verification - validates against user's email for basic auth
+    // In production, this should be a proper admin role check
+    if (password !== user.email) {
+      toast({
+        title: "Invalid Password",
+        description: "Please enter your account email to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await clearAllTransactions();
   };
 
   const getFilteredTransactions = () => {

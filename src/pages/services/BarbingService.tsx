@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatNaira } from '@/lib/currency';
 import { BARBING_SERVICES, PAYMENT_MODES, calculateCashback } from '@/lib/services';
 import { Receipt, ReceiptData } from '@/components/ui/receipt';
+import { validatePhoneNumber, validateCustomerName, sanitizeInput, transactionRateLimiter } from '@/lib/validation';
 import { ArrowLeft, Scissors, CreditCard } from 'lucide-react';
 import {
   Dialog,
