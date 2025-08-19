@@ -11,7 +11,7 @@ import { Loader2, Scissors } from 'lucide-react';
 const Login = () => {
   const { isAuthenticated, login } = useAuth();
   const { toast } = useToast();
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
 
   if (isAuthenticated) {
@@ -22,7 +22,7 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const result = await login(credentials.username, credentials.password);
+    const result = await login(credentials.email, credentials.password);
     
     if (result.success) {
       toast({
@@ -53,13 +53,13 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                value={credentials.username}
-                onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-                placeholder="Enter username"
+                id="email"
+                type="email"
+                value={credentials.email}
+                onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                placeholder="Enter email"
                 required
               />
             </div>
@@ -91,7 +91,7 @@ const Login = () => {
             </Button>
           </form>
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            Default: admin / admin123
+            Use your Supabase account credentials
           </div>
         </CardContent>
       </Card>
