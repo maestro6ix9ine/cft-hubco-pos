@@ -104,7 +104,7 @@ const Dashboard = () => {
               <img 
                 src="/lovable-uploads/9365bccb-e434-4674-8f9b-2b175584ce26.png" 
                 alt="C.F.T. Hub & Co. Logo" 
-                className="h-32 w-32"
+                className="h-20 w-20"
               />
               <div>
                 <h1 className="text-xl font-bold">C.F.T. Hub & Co.</h1>
