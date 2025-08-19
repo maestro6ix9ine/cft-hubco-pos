@@ -71,7 +71,7 @@ const ChargingService = () => {
   const servicePrice = parseNairaAmount(formData.price);
 
   const canUseCashback = () => {
-    return customer && customer.cashback_balance >= servicePrice && formData.paymentMode === 'cashback' && servicePrice > 0;
+    return customer && customer.cashback_balance >= servicePrice && servicePrice > 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

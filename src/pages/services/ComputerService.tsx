@@ -189,7 +189,7 @@ const ComputerService = () => {
   const totalPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
 
   const canUseCashback = () => {
-    return customer && customer.cashback_balance >= totalPrice && formData.paymentMode === 'cashback' && totalPrice > 0;
+    return customer && customer.cashback_balance >= totalPrice && totalPrice > 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

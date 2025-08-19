@@ -77,7 +77,7 @@ const BarbingService = () => {
   };
 
   const canUseCashback = () => {
-    return customer && customer.cashback_balance >= servicePrice && formData.paymentMode === 'cashback';
+    return customer && customer.cashback_balance >= servicePrice;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
