@@ -14,125 +14,13 @@ export type Database = {
   }
   public: {
     Tables: {
-      admin: {
-        Row: {
-          created_at: string
-          id: string
-          password_hash: string
-          updated_at: string
-          username: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          password_hash: string
-          updated_at?: string
-          username: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          password_hash?: string
-          updated_at?: string
-          username?: string
-        }
-        Relationships: []
-      }
-      customers: {
-        Row: {
-          cashback_balance: number
-          created_at: string
-          customer_name: string
-          phone_number: string
-          total_spent: number
-          total_transactions: number
-          updated_at: string
-        }
-        Insert: {
-          cashback_balance?: number
-          created_at?: string
-          customer_name: string
-          phone_number: string
-          total_spent?: number
-          total_transactions?: number
-          updated_at?: string
-        }
-        Update: {
-          cashback_balance?: number
-          created_at?: string
-          customer_name?: string
-          phone_number?: string
-          total_spent?: number
-          total_transactions?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      transactions: {
-        Row: {
-          additional_notes: string | null
-          cashback_earned: number
-          cashback_used: number
-          created_at: string
-          customer_name: string
-          customer_phone: string
-          id: string
-          payment_mode: string
-          receipt_number: string
-          service_category: string
-          service_details: Json
-          total_amount: number
-          transaction_date: string
-        }
-        Insert: {
-          additional_notes?: string | null
-          cashback_earned?: number
-          cashback_used?: number
-          created_at?: string
-          customer_name: string
-          customer_phone: string
-          id?: string
-          payment_mode: string
-          receipt_number: string
-          service_category: string
-          service_details: Json
-          total_amount: number
-          transaction_date?: string
-        }
-        Update: {
-          additional_notes?: string | null
-          cashback_earned?: number
-          cashback_used?: number
-          created_at?: string
-          customer_name?: string
-          customer_phone?: string
-          id?: string
-          payment_mode?: string
-          receipt_number?: string
-          service_category?: string
-          service_details?: Json
-          total_amount?: number
-          transaction_date?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transactions_customer_phone_fkey"
-            columns: ["customer_phone"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["phone_number"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      generate_receipt_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
