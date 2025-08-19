@@ -102,9 +102,9 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img 
-                src="/lovable-uploads/0532acf7-0b68-41b6-924d-f659c98c87a3.png" 
+                src="/lovable-uploads/23b84302-c8a3-4405-9e1b-e26fb7b0de40.png" 
                 alt="C.F.T. Hub & Co. Logo" 
-                className="h-10 w-10"
+                className="h-32 w-32"
               />
               <div>
                 <h1 className="text-xl font-bold">C.F.T. Hub & Co.</h1>
