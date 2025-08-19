@@ -42,11 +42,11 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-hero">
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16 text-center">
-        <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-strong">
+        <div className="mx-auto mb-8 flex h-40 w-40 items-center justify-center rounded-full bg-white shadow-strong">
           <img 
-            src="/lovable-uploads/0532acf7-0b68-41b6-924d-f659c98c87a3.png" 
+            src="/lovable-uploads/9365bccb-e434-4674-8f9b-2b175584ce26.png" 
             alt="C.F.T. Hub & Co. Logo" 
-            className="h-16 w-16 rounded-full"
+            className="h-32 w-32 rounded-full"
           />
         </div>
         
