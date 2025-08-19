@@ -764,6 +764,24 @@ const ComputerService = () => {
           {receiptData && (
             <Receipt data={receiptData} />
           )}
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowReceipt(false)}
+              className="flex-1"
+            >
+              New Transaction
+            </Button>
+            <Button
+              onClick={() => {
+                setShowReceipt(false);
+                navigate('/dashboard');
+              }}
+              className="flex-1"
+            >
+              Complete & Return to Dashboard
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
