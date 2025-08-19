@@ -1,17 +1,74 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Scissors, Zap, Monitor, FileText, LogOut, Users } from 'lucide-react';
 
 const Dashboard = () => {
   const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const [todayStats, setTodayStats] = useState({ revenue: 0, count: 0 });
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  const fetchTodayTransactions = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('total_amount')
+      .gte('created_at', `${today}T00:00:00.000Z`)
+      .lt('created_at', `${today}T23:59:59.999Z`);
+
+    if (error) {
+      console.error('Error fetching today transactions:', error);
+      return { revenue: 0, count: 0 };
+    }
+
+    const count = data?.length || 0;
+    const revenue = data?.reduce((sum, transaction) => sum + (transaction.total_amount || 0), 0) || 0;
+    
+    return { revenue, count };
+  };
+
+  const fetchTotalCustomers = async () => {
+    const { count, error } = await supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true });
+
+    if (error) {
+      console.error('Error fetching customers count:', error);
+      return 0;
+    }
+
+    return count || 0;
+  };
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [todayData, customersCount] = await Promise.all([
+        fetchTodayTransactions(),
+        fetchTotalCustomers()
+      ]);
+
+      setTodayStats(todayData);
+      setTotalCustomers(customersCount);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
   const services = [
     {
@@ -121,14 +178,20 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Today's Transactions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">₦0</div>
-              <p className="text-sm text-muted-foreground">0 transactions</p>
+              {loading ? (
+                <div className="text-3xl font-bold text-muted-foreground">Loading...</div>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-primary">₦{todayStats.revenue.toLocaleString()}</div>
+                  <p className="text-sm text-muted-foreground">{todayStats.count} transactions</p>
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -136,17 +199,14 @@ const Dashboard = () => {
               <CardTitle className="text-lg">Total Customers</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">0</div>
-              <p className="text-sm text-muted-foreground">Registered customers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Cashback Balance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary">₦0</div>
-              <p className="text-sm text-muted-foreground">Total outstanding</p>
+              {loading ? (
+                <div className="text-3xl font-bold text-muted-foreground">Loading...</div>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-primary">{totalCustomers}</div>
+                  <p className="text-sm text-muted-foreground">Registered customers</p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
