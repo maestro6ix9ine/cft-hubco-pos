@@ -41,6 +41,8 @@ const ChargingService = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showNameMismatchDialog, setShowNameMismatchDialog] = useState(false);
+  const [nameMismatch, setNameMismatch] = useState(false);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -51,8 +53,24 @@ const ChargingService = () => {
       fetchCustomer();
     } else {
       setCustomer(null);
+      setNameMismatch(false);
     }
   }, [formData.customerPhone]);
+
+  // Check for name mismatch when customer or customerName changes
+  useEffect(() => {
+    if (customer && formData.customerName.trim()) {
+      const customerNameMatch = customer.customer_name.toLowerCase().trim() === formData.customerName.toLowerCase().trim();
+      if (!customerNameMatch) {
+        setNameMismatch(true);
+        setShowNameMismatchDialog(true);
+      } else {
+        setNameMismatch(false);
+      }
+    } else {
+      setNameMismatch(false);
+    }
+  }, [customer, formData.customerName]);
 
   const fetchCustomer = async () => {
     try {
@@ -100,6 +118,10 @@ const ChargingService = () => {
 
       if (servicePrice <= 0) {
         throw new Error('Please enter a valid price');
+      }
+
+      if (nameMismatch) {
+        throw new Error('Customer name does not match the existing record. Please review and correct the name.');
       }
 
       if (formData.paymentMode === 'cashback' && !canUseCashback()) {
@@ -414,10 +436,19 @@ const ChargingService = () => {
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={loading || !formData.customerPhone || !formData.customerName || formData.selectedDevices.length === 0 || !formData.portNumber || !formData.paymentMode}
+                  disabled={loading || !formData.customerPhone || !formData.customerName || formData.selectedDevices.length === 0 || !formData.portNumber || !formData.paymentMode || nameMismatch}
                 >
                   {loading ? 'Processing...' : 'Complete Transaction'}
                 </Button>
+                
+                {/* Name Mismatch Warning */}
+                {nameMismatch && (
+                  <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                    <div className="text-sm text-red-800">
+                      ⚠️ Customer name does not match the existing record. Please review and correct the name before proceeding.
+                    </div>
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>
@@ -452,6 +483,49 @@ const ChargingService = () => {
               className="flex-1"
             >
               Complete & Return to Dashboard
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Name Mismatch Dialog */}
+      <Dialog open={showNameMismatchDialog} onOpenChange={setShowNameMismatchDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Customer Name Mismatch</DialogTitle>
+            <DialogDescription>
+              The Customer Name does not match what was previously in the database; Please Review.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <div className="text-sm">
+                <strong>Database Name:</strong> {customer?.customer_name}
+              </div>
+              <div className="text-sm mt-1">
+                <strong>Entered Name:</strong> {formData.customerName}
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Please correct the customer name to match the database record or verify the customer information.
+            </p>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFormData(prev => ({ ...prev, customerName: customer?.customer_name || '' }));
+                setShowNameMismatchDialog(false);
+              }}
+              className="flex-1"
+            >
+              Use Database Name
+            </Button>
+            <Button
+              onClick={() => setShowNameMismatchDialog(false)}
+              className="flex-1"
+            >
+              I'll Correct It
             </Button>
           </div>
         </DialogContent>
