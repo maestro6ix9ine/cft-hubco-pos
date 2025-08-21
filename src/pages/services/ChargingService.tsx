@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatNaira, parseNairaAmount } from '@/lib/currency';
 import { DEVICE_TYPES, PAYMENT_MODES, calculateCashback } from '@/lib/services';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Receipt, ReceiptData } from '@/components/ui/receipt';
 import { ArrowLeft, Zap, CreditCard } from 'lucide-react';
 import {
@@ -29,7 +30,7 @@ const ChargingService = () => {
   const [formData, setFormData] = useState({
     customerPhone: '',
     customerName: '',
-    deviceType: '',
+    selectedDevices: [] as string[],
     portNumber: '',
     price: '',
     paymentMode: '',
@@ -68,7 +69,21 @@ const ChargingService = () => {
     }
   };
 
-  const servicePrice = parseNairaAmount(formData.price);
+  // Calculate total price based on selected devices
+  const calculateTotalPrice = () => {
+    return formData.selectedDevices.reduce((total, deviceValue) => {
+      const device = DEVICE_TYPES.find(d => d.value === deviceValue);
+      return total + (device?.price || 0);
+    }, 0);
+  };
+
+  const servicePrice = calculateTotalPrice();
+  
+  // Update price field when devices change
+  useEffect(() => {
+    const totalPrice = calculateTotalPrice();
+    setFormData(prev => ({ ...prev, price: totalPrice.toString() }));
+  }, [formData.selectedDevices]);
 
   const canUseCashback = () => {
     return customer && customer.cashback_balance >= servicePrice && servicePrice > 0;
@@ -79,7 +94,7 @@ const ChargingService = () => {
     setLoading(true);
 
     try {
-      if (!formData.customerPhone || !formData.customerName || !formData.deviceType || !formData.portNumber || !formData.price || !formData.paymentMode) {
+      if (!formData.customerPhone || !formData.customerName || formData.selectedDevices.length === 0 || !formData.portNumber || !formData.paymentMode) {
         throw new Error('Please fill in all required fields');
       }
 
@@ -102,7 +117,11 @@ const ChargingService = () => {
       if (receiptError) throw receiptError;
 
       const serviceDetails = {
-        deviceType: formData.deviceType,
+        selectedDevices: formData.selectedDevices,
+        deviceDetails: formData.selectedDevices.map(deviceValue => {
+          const device = DEVICE_TYPES.find(d => d.value === deviceValue);
+          return { type: device?.label, price: device?.price };
+        }),
         portNumber: formData.portNumber,
         price: servicePrice
       };
@@ -171,7 +190,7 @@ const ChargingService = () => {
       setFormData({
         customerPhone: '',
         customerName: '',
-        deviceType: '',
+        selectedDevices: [],
         portNumber: '',
         price: '',
         paymentMode: '',
@@ -267,21 +286,40 @@ const ChargingService = () => {
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Service Details</h3>
                   
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-4">
                     <div>
-                      <Label htmlFor="deviceType">Device Type *</Label>
-                      <Select value={formData.deviceType} onValueChange={(value) => setFormData({ ...formData, deviceType: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select device type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DEVICE_TYPES.map((device) => (
-                            <SelectItem key={device} value={device}>
-                              {device}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label>Device Types * (Select multiple)</Label>
+                      <div className="grid gap-3 mt-2">
+                        {DEVICE_TYPES.map((device) => (
+                          <div key={device.value} className="flex items-center space-x-3 p-3 border rounded-lg">
+                            <Checkbox
+                              id={device.value}
+                              checked={formData.selectedDevices.includes(device.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    selectedDevices: [...prev.selectedDevices, device.value]
+                                  }));
+                                } else {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    selectedDevices: prev.selectedDevices.filter(d => d !== device.value)
+                                  }));
+                                }
+                              }}
+                            />
+                            <div className="flex-1 flex justify-between items-center">
+                              <Label htmlFor={device.value} className="cursor-pointer">
+                                {device.label}
+                              </Label>
+                              <span className="text-sm font-medium text-primary">
+                                {formatNaira(device.price)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                     
                     <div>
@@ -297,17 +335,18 @@ const ChargingService = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="price">Price (₦) *</Label>
+                    <Label htmlFor="price">Total Price (₦)</Label>
                     <Input
                       id="price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      placeholder="Enter charging price"
-                      required
+                      type="text"
+                      value={formatNaira(servicePrice)}
+                      readOnly
+                      className="bg-muted text-muted-foreground cursor-not-allowed"
+                      placeholder="Auto-calculated based on selected devices"
                     />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Price is automatically calculated based on selected devices
+                    </div>
                   </div>
                 </div>
 
@@ -375,7 +414,7 @@ const ChargingService = () => {
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={loading || !formData.customerPhone || !formData.customerName || !formData.deviceType || !formData.portNumber || !formData.price || !formData.paymentMode}
+                  disabled={loading || !formData.customerPhone || !formData.customerName || formData.selectedDevices.length === 0 || !formData.portNumber || !formData.paymentMode}
                 >
                   {loading ? 'Processing...' : 'Complete Transaction'}
                 </Button>

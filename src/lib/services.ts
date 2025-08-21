@@ -13,11 +13,13 @@ export const PAYMENT_MODES = [
 ] as const;
 
 export const DEVICE_TYPES = [
-  'iPhone',
-  'Android',
-  'Power Bank',
-  'Laptop',
-  'Other'
+  { value: 'iPhone', label: 'iPhone', price: 300 },
+  { value: 'Android', label: 'Android', price: 300 },
+  { value: 'Non-Smart Phone', label: 'Non-Smart Phone', price: 200 },
+  { value: 'Power Bank Small', label: 'Power Bank - Small', price: 300 },
+  { value: 'Power Bank Big', label: 'Power Bank - Big', price: 500 },
+  { value: 'Laptop', label: 'Laptop', price: 300 },
+  { value: 'Other', label: 'Other', price: 200 },
 ] as const;
 
 export const PRINT_SERVICES = {
