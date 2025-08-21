@@ -39,6 +39,7 @@ export const Receipt = ({ data, className = '' }: ReceiptProps) => {
               .receipt { background: white; }
               .header { text-align: center; margin-bottom: 15px; }
               .business-name { font-weight: bold; font-size: 16px; }
+              .logo { width: 48px; height: 48px; margin: 0 auto 12px auto; object-fit: contain; }
               .line { border-bottom: 1px dashed #000; margin: 10px 0; }
               .row { display: flex; justify-content: space-between; margin: 5px 0; }
               .total { font-weight: bold; }
@@ -104,6 +105,13 @@ export const Receipt = ({ data, className = '' }: ReceiptProps) => {
       <div className="receipt-content">
         {/* Header */}
         <div className="text-center mb-4">
+          <div className="mb-3">
+            <img 
+              src="/lovable-uploads/0532acf7-0b68-41b6-924d-f659c98c87a3.png" 
+              alt="C.F.T. Hub & Co. Logo" 
+              className="w-16 h-16 mx-auto object-contain"
+            />
+          </div>
           <div className="business-name text-lg font-bold">C.F.T. Hub & Co.</div>
           <div className="text-sm">Point of Sale System</div>
         </div>
