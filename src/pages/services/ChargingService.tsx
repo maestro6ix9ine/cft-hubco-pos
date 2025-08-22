@@ -148,18 +148,14 @@ const ChargingService = () => {
         price: servicePrice
       };
 
-      // Create or update customer - preserve existing name if customer exists
+      // Create or update customer - always include customer_name to avoid constraint violation
       let customerUpsertData: any = {
         phone_number: formData.customerPhone,
+        customer_name: customer ? customer.customer_name : formData.customerName,
         total_transactions: (customer?.total_transactions || 0) + 1,
         total_spent: (customer?.total_spent || 0) + servicePrice,
         cashback_balance: (customer?.cashback_balance || 0) - cashbackUsed + cashbackEarned,
       };
-
-      // Only update name if this is a new customer
-      if (!customer) {
-        customerUpsertData.customer_name = formData.customerName;
-      }
 
       const { error: customerError } = await supabase
         .from('customers')
