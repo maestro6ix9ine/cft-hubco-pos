@@ -5,11 +5,9 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Scissors, Zap, Monitor, FileText, LogOut, Users } from 'lucide-react';
+
 const Dashboard = () => {
-  const {
-    isAuthenticated,
-    logout
-  } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [todayStats, setTodayStats] = useState({
     revenue: 0,
@@ -17,37 +15,32 @@ const Dashboard = () => {
   });
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [loading, setLoading] = useState(true);
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   const fetchTodayTransactions = async () => {
     const today = new Date().toISOString().split('T')[0];
-    const {
-      data,
-      error
-    } = await supabase.from('transactions').select('total_amount').gte('created_at', `${today}T00:00:00.000Z`).lt('created_at', `${today}T23:59:59.999Z`);
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('total_amount')
+      .gte('created_at', `${today}T00:00:00.000Z`)
+      .lt('created_at', `${today}T23:59:59.999Z`);
+    
     if (error) {
       console.error('Error fetching today transactions:', error);
-      return {
-        revenue: 0,
-        count: 0
-      };
+      return { revenue: 0, count: 0 };
     }
+    
     const count = data?.length || 0;
     const revenue = data?.reduce((sum, transaction) => sum + (transaction.total_amount || 0), 0) || 0;
-    return {
-      revenue,
-      count
-    };
+    return { revenue, count };
   };
   const fetchTotalCustomers = async () => {
-    const {
-      count,
-      error
-    } = await supabase.from('customers').select('*', {
-      count: 'exact',
-      head: true
-    });
+    const { count, error } = await supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true });
+    
     if (error) {
       console.error('Error fetching customers count:', error);
       return 0;
@@ -69,33 +62,38 @@ const Dashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, []);
-  const services = [{
-    id: 'barbing',
-    title: 'Barbing Services',
-    description: 'Haircut transactions and styling services',
-    icon: Scissors,
-    color: 'bg-gradient-to-br from-blue-500 to-blue-600',
-    route: '/services/barbing'
-  }, {
-    id: 'charging',
-    title: 'Charging Hub',
-    description: 'Device charging and power services',
-    icon: Zap,
-    color: 'bg-gradient-to-br from-yellow-500 to-orange-500',
-    route: '/services/charging'
-  }, {
-    id: 'computer',
-    title: 'Computer Services',
-    description: 'Printing, scanning, binding & lamination',
-    icon: Monitor,
-    color: 'bg-gradient-to-br from-purple-500 to-purple-600',
-    route: '/services/computer'
-  }];
+  const services = [
+    {
+      id: 'barbing',
+      title: 'Barbing Services',
+      description: 'Haircut transactions and styling services',
+      icon: Scissors,
+      color: 'bg-gradient-to-br from-blue-500 to-blue-600',
+      route: '/services/barbing'
+    },
+    {
+      id: 'charging',
+      title: 'Charging Hub',
+      description: 'Device charging and power services',
+      icon: Zap,
+      color: 'bg-gradient-to-br from-yellow-500 to-orange-500',
+      route: '/services/charging'
+    },
+    {
+      id: 'computer',
+      title: 'Computer Services',
+      description: 'Printing, scanning, binding & lamination',
+      icon: Monitor,
+      color: 'bg-gradient-to-br from-purple-500 to-purple-600',
+      route: '/services/computer'
+    }
+  ];
   const handleLogout = () => {
     logout();
     navigate('/');
   };
-  return <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card shadow-soft">
         <div className="container mx-auto px-4 py-4">
@@ -137,7 +135,12 @@ const Dashboard = () => {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {services.map(service => <Card key={service.id} className="cursor-pointer transition-all hover:scale-105 hover:shadow-strong" onClick={() => navigate(service.route)}>
+          {services.map(service => (
+            <Card 
+              key={service.id} 
+              className="cursor-pointer transition-all hover:scale-105 hover:shadow-strong" 
+              onClick={() => navigate(service.route)}
+            >
               <CardHeader className="pb-4">
                 <div className={`inline-flex h-12 w-12 items-center justify-center rounded-lg ${service.color} mb-4`}>
                   <service.icon className="h-6 w-6 text-white" />
@@ -150,7 +153,8 @@ const Dashboard = () => {
                   Start Transaction
                 </Button>
               </CardContent>
-            </Card>)}
+            </Card>
+          ))}
         </div>
 
         {/* Quick Stats */}
@@ -160,10 +164,14 @@ const Dashboard = () => {
               <CardTitle className="text-lg">Today's Transactions</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? <div className="text-3xl font-bold text-muted-foreground">Loading...</div> : <>
+              {loading ? (
+                <div className="text-3xl font-bold text-muted-foreground">Loading...</div>
+              ) : (
+                <>
                   <div className="text-3xl font-bold text-primary">₦{todayStats.revenue.toLocaleString()}</div>
                   <p className="text-sm text-muted-foreground">{todayStats.count} transactions</p>
-                </>}
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -171,14 +179,19 @@ const Dashboard = () => {
               <CardTitle className="text-lg">Total Customers</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? <div className="text-3xl font-bold text-muted-foreground">Loading...</div> : <>
+              {loading ? (
+                <div className="text-3xl font-bold text-muted-foreground">Loading...</div>
+              ) : (
+                <>
                   <div className="text-3xl font-bold text-primary">{totalCustomers}</div>
                   <p className="text-sm text-muted-foreground">Registered customers</p>
-                </>}
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
       </main>
-    </div>;
+    </div>
+  );
 };
 export default Dashboard;

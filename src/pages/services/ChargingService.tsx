@@ -1,530 +1,246 @@
-import React, { useState, useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { formatNaira, parseNairaAmount } from '@/lib/currency';
-import { DEVICE_TYPES, PAYMENT_MODES, calculateCashback } from '@/lib/services';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Receipt, ReceiptData } from '@/components/ui/receipt';
-import { ArrowLeft, Zap, CreditCard } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { useAuth } from '@/hooks/useAuth';
+import { useCustomer } from '@/hooks/useCustomer';
+import { useTransaction } from '@/hooks/useTransaction';
+import { useServiceForm, BaseFormData } from '@/hooks/useServiceForm';
+import { formatNaira } from '@/lib/currency';
+import { DEVICE_TYPES } from '@/lib/services';
+import { ReceiptData } from '@/components/ui/receipt';
+import { Zap } from 'lucide-react';
+import { ServiceLayout } from '@/components/shared/ServiceLayout';
+import { CustomerInfoSection } from '@/components/shared/CustomerInfoSection';
+import { PaymentSection } from '@/components/shared/PaymentSection';
+import { TransactionComplete } from '@/components/shared/TransactionComplete';
+
+interface ChargingFormData extends BaseFormData {
+  selectedDevices: string[];
+  deviceDetails: { type: string; price: number }[];
+  portNumber: string;
+}
+
+const initialFormData: ChargingFormData = {
+  customerPhone: '',
+  customerName: '',
+  selectedDevices: [],
+  deviceDetails: [],
+  portNumber: '',
+  paymentMode: '',
+  additionalNotes: '',
+};
 
 const ChargingService = () => {
   const { isAuthenticated } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const { formData, updateField, resetForm, isValid } = useServiceForm(initialFormData);
+  const { customer, canUseCashback } = useCustomer(formData.customerPhone);
+  const { processTransaction, loading } = useTransaction();
   
-  const [formData, setFormData] = useState({
-    customerPhone: '',
-    customerName: '',
-    selectedDevices: [] as string[],
-    portNumber: '',
-    price: '',
-    paymentMode: '',
-    additionalNotes: '',
-  });
-  
-  const [customer, setCustomer] = useState<any>(null);
+  const [totalPrice, setTotalPrice] = useState(0);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showNameMismatchDialog, setShowNameMismatchDialog] = useState(false);
-  const [nameMismatch, setNameMismatch] = useState(false);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   useEffect(() => {
-    if (formData.customerPhone.length >= 10) {
-      fetchCustomer();
+    const price = formData.deviceDetails.reduce((sum, device) => sum + device.price, 0);
+    setTotalPrice(price);
+  }, [formData.deviceDetails]);
+
+  const handleDeviceToggle = (deviceValue: string) => {
+    const isSelected = formData.selectedDevices.includes(deviceValue);
+    const device = DEVICE_TYPES.find(d => d.value === deviceValue);
+    
+    if (!device) return;
+
+    if (isSelected) {
+      // Remove device
+      updateField('selectedDevices', formData.selectedDevices.filter(d => d !== deviceValue));
+      updateField('deviceDetails', formData.deviceDetails.filter(d => d.type !== device.label));
     } else {
-      setCustomer(null);
-      setNameMismatch(false);
-    }
-  }, [formData.customerPhone]);
-
-  // Check for name mismatch when customer or customerName changes
-  useEffect(() => {
-    if (customer && formData.customerName.trim()) {
-      const customerNameMatch = customer.customer_name.toLowerCase().trim() === formData.customerName.toLowerCase().trim();
-      if (!customerNameMatch) {
-        setNameMismatch(true);
-        setShowNameMismatchDialog(true);
-      } else {
-        setNameMismatch(false);
-      }
-    } else {
-      setNameMismatch(false);
-    }
-  }, [customer, formData.customerName]);
-
-  const fetchCustomer = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('phone_number', formData.customerPhone)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      setCustomer(data);
-    } catch (error) {
-      console.error('Error fetching customer:', error);
+      // Add device
+      updateField('selectedDevices', [...formData.selectedDevices, deviceValue]);
+      updateField('deviceDetails', [...formData.deviceDetails, { type: device.label, price: device.price }]);
     }
   };
 
-  // Calculate total price based on selected devices
-  const calculateTotalPrice = () => {
-    return formData.selectedDevices.reduce((total, deviceValue) => {
-      const device = DEVICE_TYPES.find(d => d.value === deviceValue);
-      return total + (device?.price || 0);
-    }, 0);
-  };
-
-  const servicePrice = calculateTotalPrice();
-  
-  // Update price field when devices change
-  useEffect(() => {
-    const totalPrice = calculateTotalPrice();
-    setFormData(prev => ({ ...prev, price: totalPrice.toString() }));
-  }, [formData.selectedDevices]);
-
-  const canUseCashback = () => {
-    return customer && customer.cashback_balance >= servicePrice && servicePrice > 0;
+  const isFormValid = () => {
+    return isValid() && 
+           formData.selectedDevices.length > 0 && 
+           formData.portNumber;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
-    try {
-      if (!formData.customerPhone || !formData.customerName || formData.selectedDevices.length === 0 || !formData.portNumber || !formData.paymentMode) {
-        throw new Error('Please fill in all required fields');
-      }
+    if (!isFormValid()) {
+      return;
+    }
 
-      if (servicePrice <= 0) {
-        throw new Error('Please enter a valid price');
-      }
+    if (formData.paymentMode === 'cashback' && !canUseCashback(totalPrice)) {
+      return;
+    }
 
-      // Note: Name mismatch is informational only, does not prevent transaction
+    const serviceDetails = {
+      selectedDevices: formData.selectedDevices,
+      deviceDetails: formData.deviceDetails,
+      portNumber: formData.portNumber,
+      price: totalPrice
+    };
 
-      if (formData.paymentMode === 'cashback' && !canUseCashback()) {
-        throw new Error('Insufficient cashback balance or invalid payment mode');
-      }
+    const result = await processTransaction({
+      customerPhone: formData.customerPhone,
+      customerName: formData.customerName.trim() || 'Unknown Customer',
+      serviceCategory: 'Charging Hub',
+      serviceDetails,
+      totalAmount: totalPrice,
+      paymentMode: formData.paymentMode,
+      additionalNotes: formData.additionalNotes,
+    }, customer);
 
-      const actualAmountPaid = formData.paymentMode === 'cashback' ? 0 : servicePrice;
-      const cashbackUsed = formData.paymentMode === 'cashback' ? servicePrice : 0;
-      const cashbackEarned = formData.paymentMode === 'cashback' ? 0 : calculateCashback(servicePrice);
-
-      // Generate receipt number
-      const { data: receiptNum, error: receiptError } = await supabase
-        .rpc('generate_receipt_number');
-      
-      if (receiptError) throw receiptError;
-
-      const serviceDetails = {
-        selectedDevices: formData.selectedDevices,
-        deviceDetails: formData.selectedDevices.map(deviceValue => {
-          const device = DEVICE_TYPES.find(d => d.value === deviceValue);
-          return { type: device?.label, price: device?.price };
-        }),
-        portNumber: formData.portNumber,
-        price: servicePrice
-      };
-
-      // Create or update customer - always use form data name to avoid null constraint
-      let customerUpsertData: any = {
-        phone_number: formData.customerPhone,
-        customer_name: formData.customerName.trim() || 'Unknown Customer',
-        total_transactions: (customer?.total_transactions || 0) + 1,
-        total_spent: (customer?.total_spent || 0) + servicePrice,
-        cashback_balance: (customer?.cashback_balance || 0) - cashbackUsed + cashbackEarned,
-      };
-
-      const { error: customerError } = await supabase
-        .from('customers')
-        .upsert(customerUpsertData);
-
-      if (customerError) throw customerError;
-
-      // Create transaction
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          receipt_number: receiptNum,
-          customer_name: formData.customerName,
-          customer_phone: formData.customerPhone,
-          service_category: 'Charging Hub',
-          service_details: serviceDetails,
-          total_amount: actualAmountPaid,
-          payment_mode: formData.paymentMode,
-          cashback_used: cashbackUsed,
-          cashback_earned: cashbackEarned,
-          additional_notes: formData.additionalNotes || null,
-        });
-
-      if (transactionError) throw transactionError;
-
-      // Prepare receipt data
-      const receipt: ReceiptData = {
-        receiptNumber: receiptNum,
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone,
-        serviceCategory: 'Charging Hub',
-        serviceDetails,
-        totalAmount: actualAmountPaid,
-        paymentMode: formData.paymentMode,
-        cashbackUsed,
-        cashbackEarned,
-        transactionDate: new Date().toISOString(),
-        additionalNotes: formData.additionalNotes,
-      };
-
-      setReceiptData(receipt);
+    if (result.success && result.receiptData) {
+      setReceiptData(result.receiptData);
       setShowReceipt(true);
-
-      toast({
-        title: "Transaction Completed",
-        description: `Receipt ${receiptNum} generated successfully`,
-      });
-
-      // Reset form
-      setFormData({
-        customerPhone: '',
-        customerName: '',
-        selectedDevices: [],
-        portNumber: '',
-        price: '',
-        paymentMode: '',
-        additionalNotes: '',
-      });
-      setCustomer(null);
-
-    } catch (error: any) {
-      toast({
-        title: "Transaction Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      handleNewTransaction();
     }
   };
 
+  const handleNewTransaction = () => {
+    resetForm();
+    setTotalPrice(0);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card shadow-soft">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/dashboard')}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-            <div className="flex items-center space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500">
-                <Zap className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">Charging Hub</h1>
-                <p className="text-sm text-muted-foreground">Create new charging transaction</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+    <ServiceLayout
+      title="Charging Hub"
+      description="Create new charging service transaction"
+      icon={Zap}
+      iconColor="bg-gradient-to-br from-yellow-500 to-orange-500"
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>New Charging Transaction</CardTitle>
+          <CardDescription>
+            Fill in the customer and device details
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Customer Information */}
+            <CustomerInfoSection
+              phoneNumber={formData.customerPhone}
+              customerName={formData.customerName}
+              customer={customer}
+              onPhoneChange={(phone) => updateField('customerPhone', phone)}
+              onNameChange={(name) => updateField('customerName', name)}
+              loading={loading}
+            />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>New Charging Transaction</CardTitle>
-              <CardDescription>
-                Fill in the customer and service details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Customer Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Customer Information</h3>
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label htmlFor="customerPhone">Phone Number (Customer ID) *</Label>
-                      <Input
-                        id="customerPhone"
-                        type="tel"
-                        value={formData.customerPhone}
-                        onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                        placeholder="Enter phone number"
-                        required
+            {/* Device Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Device Selection</CardTitle>
+                <CardDescription>Select devices to charge</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  {DEVICE_TYPES.map((device) => (
+                    <div key={device.value} className="flex items-center space-x-3 p-3 border rounded-lg">
+                      <Checkbox
+                        id={device.value}
+                        checked={formData.selectedDevices.includes(device.value)}
+                        onCheckedChange={() => handleDeviceToggle(device.value)}
+                        disabled={loading}
                       />
-                      {customer && (
-                        <div className="text-xs text-green-600 mt-1">
-                          Existing customer • Cashback: {formatNaira(customer.cashback_balance)}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="customerName">Customer Name *</Label>
-                      <Input
-                        id="customerName"
-                        value={formData.customerName}
-                        onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                        placeholder="Enter customer name"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Service Details */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Service Details</h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Device Types * (Select multiple)</Label>
-                      <div className="grid gap-3 mt-2">
-                        {DEVICE_TYPES.map((device) => (
-                          <div key={device.value} className="flex items-center space-x-3 p-3 border rounded-lg">
-                            <Checkbox
-                              id={device.value}
-                              checked={formData.selectedDevices.includes(device.value)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    selectedDevices: [...prev.selectedDevices, device.value]
-                                  }));
-                                } else {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    selectedDevices: prev.selectedDevices.filter(d => d !== device.value)
-                                  }));
-                                }
-                              }}
-                            />
-                            <div className="flex-1 flex justify-between items-center">
-                              <Label htmlFor={device.value} className="cursor-pointer">
-                                {device.label}
-                              </Label>
-                              <span className="text-sm font-medium text-primary">
-                                {formatNaira(device.price)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                      <div className="flex-1 flex justify-between items-center">
+                        <Label htmlFor={device.value} className="cursor-pointer">
+                          {device.label}
+                        </Label>
+                        <span className="text-sm font-medium text-primary">
+                          {formatNaira(device.price)}
+                        </span>
                       </div>
                     </div>
-                    
-                    <div>
-                      <Label htmlFor="portNumber">Port Number *</Label>
-                      <Input
-                        id="portNumber"
-                        value={formData.portNumber}
-                        onChange={(e) => setFormData({ ...formData, portNumber: e.target.value })}
-                        placeholder="e.g., Port 1, Slot A, etc."
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="price">Total Price (₦)</Label>
-                    <Input
-                      id="price"
-                      type="text"
-                      value={formatNaira(servicePrice)}
-                      readOnly
-                      className="bg-muted text-muted-foreground cursor-not-allowed"
-                      placeholder="Auto-calculated based on selected devices"
-                    />
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Price is automatically calculated based on selected devices
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                {/* Payment Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Payment Information</h3>
-                  
+                {formData.selectedDevices.length > 0 && (
                   <div>
-                    <Label htmlFor="paymentMode">Payment Mode *</Label>
-                    <Select value={formData.paymentMode} onValueChange={(value) => setFormData({ ...formData, paymentMode: value })}>
+                    <Label htmlFor="portNumber">Port Number *</Label>
+                    <Select 
+                      value={formData.portNumber} 
+                      onValueChange={(value) => updateField('portNumber', value)}
+                      disabled={loading}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select payment mode" />
+                        <SelectValue placeholder="Select port number" />
                       </SelectTrigger>
                       <SelectContent>
-                        {PAYMENT_MODES.map((mode) => (
-                          <SelectItem 
-                            key={mode.value} 
-                            value={mode.value}
-                            disabled={mode.value === 'cashback' && !canUseCashback()}
-                          >
-                            {mode.label}
-                            {mode.value === 'cashback' && customer && (
-                              <span className="text-xs text-muted-foreground ml-2">
-                                (Available: {formatNaira(customer.cashback_balance)})
-                              </span>
-                            )}
+                        {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                          <SelectItem key={num} value={num.toString()}>
+                            Port {num}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {formData.paymentMode === 'cashback' && !canUseCashback() && (
-                      <div className="text-xs text-red-600 mt-1">
-                        Insufficient cashback balance or invalid price
-                      </div>
-                    )}
                   </div>
+                )}
 
-                  {/* Cashback Information */}
-                  {servicePrice > 0 && formData.paymentMode !== 'cashback' && (
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-800">
-                          Cashback to be earned: {formatNaira(calculateCashback(servicePrice))} (5%)
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Additional Notes */}
-                <div>
-                  <Label htmlFor="additionalNotes">Additional Notes (Optional)</Label>
-                  <Textarea
-                    id="additionalNotes"
-                    value={formData.additionalNotes}
-                    onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
-                    placeholder="Any additional notes or special instructions"
-                    rows={3}
-                  />
-                </div>
-
-                {/* Submit */}
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  size="lg"
-                  disabled={loading || !formData.customerPhone || !formData.customerName || formData.selectedDevices.length === 0 || !formData.portNumber || !formData.paymentMode}
-                >
-                  {loading ? 'Processing...' : 'Complete Transaction'}
-                </Button>
-                
-                {/* Name Mismatch Warning */}
-                {nameMismatch && (
-                  <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
-                    <div className="text-sm text-red-800">
-                      ⚠️ Customer name does not match the existing record. Please review and correct the name before proceeding.
+                {totalPrice > 0 && (
+                  <div className="bg-muted p-3 rounded-lg">
+                    <div className="text-lg font-semibold">
+                      Total: {formatNaira(totalPrice)}
                     </div>
                   </div>
                 )}
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+              </CardContent>
+            </Card>
 
-      {/* Receipt Dialog */}
-      <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Transaction Complete</DialogTitle>
-            <DialogDescription>
-              Receipt generated successfully
-            </DialogDescription>
-          </DialogHeader>
-          {receiptData && (
-            <Receipt data={receiptData} />
-          )}
-          <div className="flex gap-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowReceipt(false)}
-              className="flex-1"
-            >
-              New Transaction
-            </Button>
-            <Button
-              onClick={() => {
-                setShowReceipt(false);
-                navigate('/dashboard');
-              }}
-              className="flex-1"
-            >
-              Complete & Return to Dashboard
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            {/* Payment Information */}
+            {totalPrice > 0 && (
+              <PaymentSection
+                paymentMode={formData.paymentMode}
+                additionalNotes={formData.additionalNotes}
+                totalAmount={totalPrice}
+                customer={customer}
+                canUseCashback={canUseCashback(totalPrice)}
+                onPaymentModeChange={(mode) => updateField('paymentMode', mode)}
+                onNotesChange={(notes) => updateField('additionalNotes', notes)}
+                loading={loading}
+              />
+            )}
 
-      {/* Name Mismatch Dialog */}
-      <Dialog open={showNameMismatchDialog} onOpenChange={setShowNameMismatchDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Customer Name Mismatch</DialogTitle>
-            <DialogDescription>
-              The Customer Name does not match what was previously in the database; Please Review.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <div className="text-sm">
-                <strong>Database Name:</strong> {customer?.customer_name}
-              </div>
-              <div className="text-sm mt-1">
-                <strong>Entered Name:</strong> {formData.customerName}
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Please correct the customer name to match the database record or verify the customer information.
-            </p>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setFormData(prev => ({ ...prev, customerName: customer?.customer_name || '' }));
-                setShowNameMismatchDialog(false);
-              }}
-              className="flex-1"
+            {/* Submit */}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              size="lg"
+              disabled={loading || !isFormValid()}
             >
-              Use Database Name
+              {loading ? 'Processing...' : 'Complete Transaction'}
             </Button>
-            <Button
-              onClick={() => setShowNameMismatchDialog(false)}
-              className="flex-1"
-            >
-              I'll Correct It
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Transaction Complete Dialog */}
+      <TransactionComplete
+        open={showReceipt}
+        onOpenChange={setShowReceipt}
+        receiptData={receiptData}
+        onNewTransaction={() => {
+          setShowReceipt(false);
+          handleNewTransaction();
+        }}
+      />
+    </ServiceLayout>
   );
 };
 
