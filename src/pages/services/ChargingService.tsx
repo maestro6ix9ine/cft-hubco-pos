@@ -120,9 +120,7 @@ const ChargingService = () => {
         throw new Error('Please enter a valid price');
       }
 
-      if (nameMismatch) {
-        throw new Error('Customer name does not match the existing record. Please review and correct the name.');
-      }
+      // Note: Name mismatch is informational only, does not prevent transaction
 
       if (formData.paymentMode === 'cashback' && !canUseCashback()) {
         throw new Error('Insufficient cashback balance or invalid payment mode');
@@ -148,10 +146,10 @@ const ChargingService = () => {
         price: servicePrice
       };
 
-      // Create or update customer - always include customer_name to avoid constraint violation
+      // Create or update customer - always use form data name to avoid null constraint
       let customerUpsertData: any = {
         phone_number: formData.customerPhone,
-        customer_name: customer ? customer.customer_name : formData.customerName,
+        customer_name: formData.customerName.trim() || 'Unknown Customer',
         total_transactions: (customer?.total_transactions || 0) + 1,
         total_spent: (customer?.total_spent || 0) + servicePrice,
         cashback_balance: (customer?.cashback_balance || 0) - cashbackUsed + cashbackEarned,
@@ -432,7 +430,7 @@ const ChargingService = () => {
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={loading || !formData.customerPhone || !formData.customerName || formData.selectedDevices.length === 0 || !formData.portNumber || !formData.paymentMode || nameMismatch}
+                  disabled={loading || !formData.customerPhone || !formData.customerName || formData.selectedDevices.length === 0 || !formData.portNumber || !formData.paymentMode}
                 >
                   {loading ? 'Processing...' : 'Complete Transaction'}
                 </Button>
