@@ -123,17 +123,17 @@ const ReportsPage = () => {
   };
 
   const handleClearTransactions = async () => {
-    if (!password) {
+    if (!password.trim()) {
       toast({
         title: "Error",
-        description: "Please enter your password",
+        description: "Please enter your email address",
         variant: "destructive",
       });
       return;
     }
 
     // Verify user is authenticated
-    if (!user) {
+    if (!user?.email) {
       toast({
         title: "Authentication Required",
         description: "Please log in to perform this action",
@@ -144,10 +144,10 @@ const ReportsPage = () => {
 
     // Simple password verification - validates against user's email for basic auth
     // In production, this should be a proper admin role check
-    if (password !== user.email) {
+    if (password.trim().toLowerCase() !== user.email.toLowerCase()) {
       toast({
-        title: "Invalid Password",
-        description: "Please enter your account email to confirm",
+        title: "Invalid Email",
+        description: "Please enter your correct account email to confirm",
         variant: "destructive",
       });
       return;
@@ -271,13 +271,13 @@ const ReportsPage = () => {
                   <AlertDialogTitle>Clear All Transaction History</AlertDialogTitle>
                   <AlertDialogDescription>
                     This action will permanently delete ALL transaction history and reset customer balances. 
-                    Enter your admin password to confirm this action.
+                    Enter your account email address to confirm this action.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="my-4">
                   <Input
-                    type="password"
-                    placeholder="Enter admin password"
+                    type="email"
+                    placeholder="Enter your account email address"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
