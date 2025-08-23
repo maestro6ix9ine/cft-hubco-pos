@@ -19,6 +19,7 @@ const Dashboard = () => {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+  
   const fetchTodayTransactions = async () => {
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase
@@ -35,6 +36,7 @@ const Dashboard = () => {
     const revenue = data?.reduce((sum, transaction) => sum + (transaction.total_amount || 0), 0) || 0;
     return { revenue, count };
   };
+
   const fetchTotalCustomers = async () => {
     const { count, error } = await supabase
       .from('customers')
@@ -45,6 +47,7 @@ const Dashboard = () => {
     }
     return count || 0;
   };
+
   const loadDashboardData = async () => {
     setLoading(true);
     try {
@@ -52,16 +55,16 @@ const Dashboard = () => {
       setTodayStats(todayData);
       setTotalCustomers(customersCount);
     } catch (error) {
-      // Silent error handling for dashboard stats
-      setTodayStats({ revenue: 0, count: 0 });
-      setTotalCustomers(0);
+      // Silent error handling - data will show as loading/0 values
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
+
   const services = [
     {
       id: 'barbing',
@@ -88,10 +91,12 @@ const Dashboard = () => {
       route: '/services/computer'
     }
   ];
+
   const handleLogout = () => {
     logout();
     navigate('/');
   };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -194,4 +199,5 @@ const Dashboard = () => {
     </div>
   );
 };
+
 export default Dashboard;
