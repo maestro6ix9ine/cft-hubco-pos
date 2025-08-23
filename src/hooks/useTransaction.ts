@@ -65,15 +65,11 @@ export const useTransaction = () => {
       // Create or update customer
       const customerUpsertData: any = {
         phone_number: customerPhone,
+        customer_name: customerName, // Always use the form input name
         total_transactions: (customer?.total_transactions || 0) + 1,
         total_spent: (customer?.total_spent || 0) + totalAmount,
         cashback_balance: (customer?.cashback_balance || 0) - cashbackUsed + cashbackEarned,
       };
-
-      // Only update name if this is a new customer
-      if (!customer) {
-        customerUpsertData.customer_name = customerName;
-      }
 
       const { error: customerError } = await supabase
         .from('customers')
