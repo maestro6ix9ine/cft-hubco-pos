@@ -35,7 +35,6 @@ export const useCustomer = (phoneNumber: string) => {
       if (error && error.code !== 'PGRST116') throw error;
       setCustomer(data);
     } catch (err) {
-      console.error('Error fetching customer:', err);
       setError('Failed to fetch customer');
     } finally {
       setLoading(false);

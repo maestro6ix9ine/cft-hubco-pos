@@ -28,7 +28,6 @@ const Dashboard = () => {
       .lt('created_at', `${today}T23:59:59.999Z`);
     
     if (error) {
-      console.error('Error fetching today transactions:', error);
       return { revenue: 0, count: 0 };
     }
     
@@ -42,7 +41,6 @@ const Dashboard = () => {
       .select('*', { count: 'exact', head: true });
     
     if (error) {
-      console.error('Error fetching customers count:', error);
       return 0;
     }
     return count || 0;
@@ -54,7 +52,9 @@ const Dashboard = () => {
       setTodayStats(todayData);
       setTotalCustomers(customersCount);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      // Silent error handling for dashboard stats
+      setTodayStats({ revenue: 0, count: 0 });
+      setTotalCustomers(0);
     } finally {
       setLoading(false);
     }
